@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IOT102 Report - Smart Garage</title>
+  <style>
+    /* =======================================================
+           0. RESET & BASE CONFIGURATION
+           ======================================================= */
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 13pt;
+      line-height: 1.5;
+      color: #000000;
+      background-color: #e0e0e0;
+      margin: 0;
+      padding: 20px 0;
+    }
+
+    /* =======================================================
+           1. PAGE LAYOUT (LAYOUT & WRAPPER)
+           ======================================================= */
+    .a4-page {
+      width: 210mm;
+      min-height: 297mm;
+      background-color: #ffffff;
+      margin: 0 auto;
+      padding: 20mm;
+      /* 2cm uniform margins */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cover-page {
+      min-height: 250mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* =======================================================
+           2. TYPOGRAPHY (TEXT & PARAGRAPHS)
+           ======================================================= */
+    h1 {
+      font-size: 18pt;
+      color: #003366;
+      text-align: center;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 16pt;
+      color: #003366;
+      border-bottom: 2px solid #003366;
+      padding-bottom: 5px;
+      margin-top: 30px;
+      margin-bottom: 15px;
+    }
+
+    h3 {
+      font-size: 14pt;
+      color: #000000;
+      font-weight: bold;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    h4 {
+      font-size: 12pt;
+      color: #434343;
+      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      text-align: justify;
+      margin-bottom: 12px;
+    }
+
+    ul,
+    ol {
+      margin-bottom: 15px;
+      padding-left: 25px;
+    }
+
+    li {
+      margin-bottom: 5px;
+    }
+
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #f8f8f8;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 11pt;
+    }
+
+    pre {
+      background-color: #f4f7f9;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 7pt;
+      white-space: pre-wrap;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    /* =======================================================
+           3. COMPONENTS (TABLES & IMAGES)
+           ======================================================= */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+
+    th,
+    td {
+      border: 1px solid #000000;
+      padding: 8px 12px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      text-align: center;
+      color: #003366;
+    }
+
+    .image-box {
+      border: 2px dashed #003366;
+      background-color: #f4f7f9;
+      text-align: center;
+      padding: 40px 20px;
+      margin: 20px 0;
+      color: #555;
+      page-break-inside: avoid;
+      overflow: hidden;
+    }
+
+    .image-box img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .image-box p {
+      font-size: 11pt;
+      color: #3a3a3a;
+      text-align: center;
+      margin-top: 20px;
+      font-style: italic;
+    }
+
+    /* =======================================================
+           4. UTILITY CLASSES (PRINT & PAGE CONTROL)
+           ======================================================= */
+    .section-header {
+      page-break-before: always !important;
+      break-before: page !important;
+      margin-top: 0;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 20mm;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff;
+        padding: 0;
+      }
+
+      .a4-page {
+        width: 100%;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+
+      p {
+        orphans: 3;
+        widows: 3;
+      }
+
+      h2,
+      h3,
+      h4 {
+        page-break-after: avoid;
+        break-after: avoid;
+        page-break-inside: avoid;
+      }
+
+      h2+table,
+      h3+table,
+      h4+table,
+      h2+.image-box,
+      h3+.image-box,
+      h4+.image-box {
+        page-break-before: avoid;
+        break-before: avoid;
+      }
+
+      table {
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+
+      tr,
+      td,
+      th {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      thead {
+        display: table-header-group;
+      }
+
+      .image-box {
+        border: 1px solid #ddd;
+      }
+
+      /* Change dashed border to solid faint border when printing */
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="a4-page">
+
+    <div class="cover-page">
+      <h1>PROJECT IOT102</h1>
+      <h2 style="text-align: center; border: none; margin-top: 0; padding-bottom: 40px;">
+        Project name: Smart Garage<br>
+      </h2>
+
+      <div style="margin-bottom: 60px; font-size: 14pt; padding-left: 20%;">
+        <p style="margin: 5px 0;"><strong>Class:</strong> SE2023</p>
+        <p style="margin: 5px 0;"><strong>Group:</strong> 6</p>
+        <br>
+        <table style="width: 80%; margin: 0; border: none;">
+          <tr style="border: none;">
+            <td style="border: none; padding: 5px 0; width: 60%;">1. Nguyễn Nhật Minh</td>
+            <td style="border: none; padding: 5px 0; width: 40%;">HE200247</td>
+          </tr>
+          <tr style="border: none;">
+            <td style="border: none; padding: 5px 0;">2. Nguyễn Đặng Minh Vũ</td>
+            <td style="border: none; padding: 5px 0;">HE200317</td>
+          </tr>
+          <tr style="border: none;">
+            <td style="border: none; padding: 5px 0;">3. Nguyễn Lê Minh</td>
+            <td style="border: none; padding: 5px 0;">HE200305</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2 style="margin-top: 0;">I. Introduction</h2>
+
+      <h3>1. Reasons for choosing the project</h3>
+      <p>Context & Problem: Traditional garage doors lack remote monitoring and automated safety features,
+        posing risks of door jamming, property damage, and unauthorized access.
+        <br>
+        <br>
+        Proposed Solution: This project aims to build a comprehensive Smart Garage system. By integrating
+        physical security (RFID), operational safety (ultrasonic anti-pinching), and a real-time Web
+        Dashboard (ReactJS & MQTT), the system provides users with seamless, secure, and remote management
+        of their parking spaces.
+      </p>
+
+      <h3>2. Project Objective</h3>
+      <p>General Objective:
+        To design and implement a stable Smart Garage model featuring real-time data synchronization between
+        the physical hardware (ESP32) and a digital Web Application via the Internet.
+        <br>
+        <br>
+        Specific Objectives:
+
+        Hardware (IoT): Develop a central control system capable of RFID authentication, providing local
+        OLED/Buzzer alerts, and utilizing an ultrasonic sensor for automatic anti-pinching (Emergency stop).
+        <br>
+        Software (Web Dashboard): Build a responsive ReactJS interface for real-time status monitoring,
+        remote door operation, and high-level security management (Master Lock feature).
+      </p>
+    </div>
+
+    <div class="section-header">
+      <h2 style="margin-top: 0;">II. Content</h2>
+
+      <h3>1. Block Diagram</h3>
+      <p>The system architecture of the Smart Garage is divided into two main components: the physical hardware layout
+        and the IoT network communication flow, as illustrated below:</p>
+
+      <div class="image-box">
+        <img src="src-img/block1.png" alt="Hardware Block Diagram"
+          style="max-width: 100%; max-height: 230mm; height: auto;" />
+        <p>Figure 1.1. Hardware block diagram of the Smart Garage system</p>
+      </div>
+
+      <div class="image-box">
+        <img src="src-img/block2.png" alt="Network Architecture Diagram"
+          style="max-width: 100%; max-height: 230mm; height: auto;" />
+        <p>Figure 1.2. Network architecture and IoT communication flow</p>
+      </div>
+
+      <h4>a. Hardware Architecture (Figure 1.1)</h4>
+      <ul>
+        <li><strong>Power Supply Architecture:</strong> The system utilizes a dual-power design to prevent voltage
+          drops. A Main Power source feeds the ESP32 microcontroller, while a dedicated <strong>Auxiliary Power Supply
+            (5V)</strong> is isolated to drive the heavy-load Servo motor and the HC-SR04 ultrasonic sensor. Both power
+          domains share a Common Ground (GND) to ensure stable signal transmission.</li>
+        <li><strong>Central Control Unit (ESP32):</strong> Acts as the core processor, handling local sensor logic,
+          motor control, and maintaining the WiFi connection to the internet.</li>
+        <li><strong>Input Block:</strong> Comprises the HC-SR04 ultrasonic sensor (obstacle detection), RC522 RFID
+          reader module (authentication), and physical push buttons (manual control).</li>
+        <li><strong>Output Block:</strong> Includes the SSD1306 OLED display (status feedback), Servo motor (door
+          actuation), LED indicators, and Buzzer (alerts).</li>
+        <li><strong>Cloud Block:</strong> Represents the external MQTT Broker (HiveMQ Cloud) that the hardware directly
+          interfaces with to push telemetry data and pull remote commands.</li>
+      </ul>
+
+      <h4>b. Network & IoT Architecture (Figure 1.2)</h4>
+      <p>The network communication flow is structured into three main layers to ensure secure, real-time data exchange:
+      </p>
+      <ul>
+        <li><strong>Edge & Gateway Layer:</strong> The Smart Garage Station (ESP32) connects to the local WiFi Router
+          (802.11 2.4GHz) and routes to the internet via TCP/IP. It communicates with the cloud broker using the MQTT
+          over TLS protocol (Port 8883, SSL/TLS Encryption).</li>
+        <li><strong>Core Cloud Layer:</strong> The HiveMQ Cloud Server acts as the central MQTT broker, receiving and
+          routing all messages between the hardware and the web interface.</li>
+        <li><strong>Application Layer:</strong> The Web Dashboard (securely hosted on localhost) connects to the HiveMQ
+          broker utilizing WebSockets Secure (WSS) via Port 8884 (HTTPS/SSL encryption).</li>
+        <li><strong>Data Exchange:</strong> All telemetry and control messages are structured in JSON format. The system
+          operates on two primary MQTT topics: <code>garage/status</code> (for hardware updates) and
+          <code>garage/command</code> (for web-based control).
+        </li>
+      </ul>
+
+      <h3>2. Hardware Required</h3>
+      <p>List of hardware components used in the project:</p>
+      <table>
+        <thead>
+          <tr>
+            <th width="10%">No.</th>
+            <th width="30%">Component</th>
+            <th width="60%">Description / Function</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center">1</td>
+            <td><strong>ESP32</strong></td>
+            <td>Central microcontroller — handles logic processing and WiFi/Bluetooth connectivity.</td>
+          </tr>
+          <tr>
+            <td class="text-center">2</td>
+            <td><strong>OLED SSD1306</strong></td>
+            <td>Status display screen showing gate state (open/closed).</td>
+          </tr>
+          <tr>
+            <td class="text-center">3</td>
+            <td><strong>HY-SRF05</strong></td>
+            <td>Ultrasonic sensor for detecting obstacles when close/open.</td>
+          </tr>
+          <tr>
+            <td class="text-center">4</td>
+            <td><strong>MFRC522 RFID</strong></td>
+            <td>RFID card reader module for controlling vehicle entry/exit.</td>
+          </tr>
+          <tr>
+            <td class="text-center">5</td>
+            <td><strong>Servo Motor</strong></td>
+            <td>Motor that controls the opening and closing of the gate.</td>
+          </tr>
+          <tr>
+            <td class="text-center">6</td>
+            <td><strong>LED</strong></td>
+            <td>Status indicator light for operational state feedback.</td>
+          </tr>
+          <tr>
+            <td class="text-center">7</td>
+            <td><strong>Buzzer</strong></td>
+            <td>Piezo buzzer for audible alerts on card scan or warning events.</td>
+          </tr>
+          <tr>
+            <td class="text-center">8</td>
+            <td><strong>Push Button x2</strong></td>
+            <td>Physical push buttons for manual control or system lock.</td>
+          </tr>
+        </tbody>
+      </table>
+
+
+
+      <h3>3. Schematic</h3>
+      <div class="image-box">
+        <img src="src-img/schematic.png" alt="Schematic" style="max-width: 100%; max-height: 230mm; height: auto;" />
+        <p>Figure 2. Wiring schematic of all components connected to the ESP32</p>
+      </div>
+
+      <h3>4. Electronic Circuit</h3>
+      <p>Simulated circuit design or physical breadboard/PCB layout of the system:</p>
+      <div class="image-box">
+        <img src="src-img/circuit.png" alt="Electronic Circuit"
+          style="max-width: 100%; max-height: 230mm; height: auto;" />
+        <p>Figure 3. Electronic circuit of the Smart Garage system</p>
+      </div>
+
+      <h3>5. Flow Chart</h3>
+      <p>Algorithm flowchart of the <code>void loop()</code> function handling the system's main logic:</p>
+      <div class="image-box">
+        <img src="src-img/flowchart1.png" alt="Flow Chart"
+          style="max-width: 85%; max-height: 230mm; width: auto; height: auto;" />
+        <p>Figure 4.1. Algorithm flow chart of the system</p>
+      </div>
+      <div class="image-box">
+        <img src="src-img/flowchart2.png" alt="Flow Chart"
+          style="max-width: 85%; max-height: 230mm; width: auto; height: auto;" />
+        <p>Figure 4.2. UPDATE STATUS flow chart of the system</p>
+      </div>
+      <div class="image-box">
+        <img src="src-img/flowchart3.png" alt="Flow Chart"
+          style="max-width: 85%; max-height: 230mm; width: auto; height: auto;" />
+        <p>Figure 4.3. EDIT CARD UID flow chart of the system</p>
+      </div>
+
+      <h3>6. Demo</h3>
+      <p>Real-world photos of the system in operation, interacting with all peripheral devices.</p>
+      <div class="image-box">
+        <img src="src-img/demo1.jpg" alt="Demo" style="max-width: 100%; max-height: 230mm; height: auto;" />
+        <p>Figure 5.1. Product demo test run: Door Closed</p>
+      </div>
+      <div class="image-box">
+        <img src="src-img/demo2.jpg" alt="Demo" style="max-width: 100%; max-height: 230mm; height: auto;" />
+        <p>Figure 5.2. Product demo test run: Door Opening</p>
+      </div>
+      <div class="image-box">
+        <img src="src-img/demo3.jpg" alt="Demo" style="max-width: 100%; max-height: 230mm; height: auto;" />
+        <p>Figure 5.3. Product demo test run: System Lock</p>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2 style="margin-top: 0;">III. Experiment</h2>
+
+      <h3>1. Prototype Implementation Results</h3>
+      <p>The IoT Smart Garage prototype was successfully assembled and deployed. The ESP32 microcontroller efficiently
+        coordinates the front panel interface (RC522 RFID reader, SSD1306 OLED) and the internal mechanical system
+        (Servo motor, HY-SRF05 ultrasonic sensor). The hardware is compactly wired and securely mounted, ensuring stable
+        physical operation and electrical safety.</p>
+
+      <h3>2. Functional Results of the System</h3>
+      <p>The system underwent rigorous testing in both local and cloud-connected modes. Below is the summary of the core
+        test cases:</p>
+      <table>
+        <thead>
+          <tr>
+            <th width="5%">No.</th>
+            <th width="22%">Test Case</th>
+            <th width="28%">Action Taken</th>
+            <th width="35%">Actual Result</th>
+            <th width="10%">Evaluation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center">1</td>
+            <td><strong>VALID Card Authentication</strong></td>
+            <td>Scan an authorized RFID card on the reader.</td>
+            <td>OLED greets the user; Servo rotates 180° to open the door.</td>
+            <td class="text-center">PASSED</td>
+          </tr>
+          <tr>
+            <td class="text-center">2</td>
+            <td><strong>INVALID Card Authentication</strong></td>
+            <td>Scan an unregistered RFID card.</td>
+            <td>OLED displays "Access Denied"; Buzzer sounds; door remains closed.</td>
+            <td class="text-center">PASSED</td>
+          </tr>
+          <tr>
+            <td class="text-center">3</td>
+            <td><strong>Open with Toggle Button</strong></td>
+            <td>Press the manual pushbutton on the device or the Web toggle.</td>
+            <td>System bypasses RFID authentication and actuates the Servo to reverse the current door state (Open ↔
+              Close).</td>
+            <td class="text-center">PASSED</td>
+          </tr>
+          <tr>
+            <td class="text-center">4</td>
+            <td><strong>Anti-pinch Safety Feature</strong></td>
+            <td>Place an obstacle &lt;10cm from sonar while closing.</td>
+            <td>Sonar detects obstacle; door stops closing and reverts to Emergency Open state.</td>
+            <td class="text-center">PASSED</td>
+          </tr>
+          <tr>
+            <td class="text-center">5</td>
+            <td><strong>Obstacle when OPEN</strong></td>
+            <td>Place an obstacle under the door while it is OPEN, then trigger a CLOSE command.</td>
+            <td>System blocks the closing sequence. OLED/Buzzer warns of obstruction until the path is cleared.</td>
+            <td class="text-center">PASSED</td>
+          </tr>
+          <tr>
+            <td class="text-center">6</td>
+            <td><strong>Local "Hard Lock"</strong></td>
+            <td>Toggle the physical Hard Lock switch/button on the control panel.</td>
+            <td>System enters lockdown mode. Local RFID and toggle button access are disabled until physically unlocked.
+            </td>
+            <td class="text-center">PASSED</td>
+          </tr>
+          <tr>
+            <td class="text-center">7</td>
+            <td><strong>Real-time Cloud Sync</strong></td>
+            <td>Open/close door physically.</td>
+            <td>System publishes status to HiveMQ; Web Dashboard updates instantly.</td>
+            <td class="text-center">PASSED</td>
+          </tr>
+          <tr>
+            <td class="text-center">8</td>
+            <td><strong>Edit Master Card via Web</strong></td>
+            <td>Publish a new RFID UID string to the designated MQTT topic via Web Dashboard.</td>
+            <td>ESP32 updates the authorized UID in memory. The new card grants access; the old card is rejected.</td>
+            <td class="text-center">PASSED</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>3. Conclusion</h3>
+      <p><strong>Evaluation of achieved objectives:</strong> The project met 100% of its technical goals. It
+        successfully delivers a robust IoT access control system with reliable mechanical actuation, real-time MQTT
+        cloud synchronization, and strict safety mechanisms (ultrasonic obstacle detection).</p>
+
+      <p><strong>Future Development Directions:</strong></p>
+      <ul>
+        <li><strong>Cloud Database:</strong> Integrate Firebase to store historical access logs (time/UID).</li>
+        <li><strong>Energy Optimization:</strong> Implement ESP32 Deep Sleep mode to reduce power consumption for
+          battery-powered deployment.</li>
+      </ul>
+    </div>
+
+    <div class="section-header">
+      <h2 style="margin-top: 0;">IV. Appendix</h2>
+
+      <h3>1. Links</h3>
+      <ul>
+        <li><strong>Simulation Link (Wokwi/Proteus/...):</strong> <a
+            href="https://wokwi.com/projects/458314766319610881">Wokwi - Smart Garage</a></li>
+        <li><strong>Demo Video Link:</strong> <a
+            href="https://drive.google.com/file/d/1-xKZ5FY49J2X6OZJH312KGn8zYu_P_73/view?usp=drive_link">Drive - Smart
+            Garage Demo</a></li>
+      </ul>
+
+      <h3>2. Code Snippets</h3>
+      <p>Main code snippet handling the system logic:</p>
+      <pre>
+                <code>// Include required libraries
+#include &lt;SPI.h&gt;
+#include &lt;Wire.h&gt;
+#include &lt;Adafruit_GFX.h&gt;
+#include &lt;Adafruit_SSD1306.h&gt;
+#include &lt;MFRC522.h&gt;
+#include &lt;ESP32Servo.h&gt;
+#include &lt;WiFi.h&gt;
+#include &lt;WiFiClientSecure.h&gt;
+#include &lt;PubSubClient.h&gt;
+#include &lt;Preferences.h&gt;
+
+// ================= MACROS & PINS =================
+#define RST_PIN 4
+#define SS_PIN 5
+#define SERVO_PIN 13
+
+#define TRIG_PIN 16
+#define ECHO_PIN 17
+
+#define BTN_TOGGLE_PIN 25
+#define BTN_LOCK_PIN 26
+
+#define LED_LOCK_PIN 14
+#define BUZZER_PIN 27
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define ANGLE_CLOSED 110
+#define ANGLE_OPENED 20
+#define ANGLE_SAFE_ZONE ((ANGLE_CLOSED + ANGLE_OPENED) / 2)
+
+// ================= NETWORK CONFIG =================
+const char* ssid = "Mia House 104";
+const char* password = "104104104";
+const char* mqtt_server = "20d885075a5b4350a1d5ba23a4310990.s1.eu.hivemq.cloud";
+const int mqtt_port = 8883; 
+const char* mqtt_user = "garage_user";
+const char* mqtt_pass = "Garage123@"; 
+const char* mqtt_topic_status = "garage/status";
+const char* mqtt_topic_cmd = "garage/command";
+
+// ================= GLOBAL OBJECTS =================
+MFRC522 rfid(SS_PIN, RST_PIN);
+Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Servo doorServo;
+WiFiClientSecure espClient; 
+PubSubClient client(espClient);
+
+
+Preferences preferences;
+// ================= STATES =================
+enum DoorState {
+  DOOR_CLOSED,
+  DOOR_OPENING,
+  DOOR_OPENED,
+  DOOR_CLOSING,
+  DOOR_STOPPED,
+  DOOR_EMERGENCY
+};
+
+DoorState currentDoorState = DOOR_CLOSED;
+bool isHardLocked = false;
+bool isPendingLock = false;
+bool isLearningCard = false;
+unsigned long learnModeStartTime = 0;
+
+// Variables for Inputs & Sensors
+bool lastLockSwitchState = false;
+bool lastToggleState = HIGH;
+int currentAngle = ANGLE_CLOSED;
+float currentDistance = 999.0;
+String masterUID = "B2:19:F5:06";
+
+// Timers
+unsigned long lastToggleTime = 0;
+unsigned long lastLockTime = 0;
+unsigned long lastRfidTime = 0;
+unsigned long lastSonarTime = 0;
+unsigned long lastServoTime = 0;
+unsigned long lastPublishTime = 0;
+unsigned long lastReconnectAttempt = 0;
+
+// ================= PROTOTYPES =================
+void updateOLED(String line1, String line2);
+void beep(int duration);
+void requestOpenDoor(String source);
+void requestCloseDoor(String source);
+void requestToggleDoor(String source);
+void requestLock();
+void requestUnlock();
+void publishStatusToWeb(bool force = false);
+void setup_wifi();
+void mqttCallback(char* topic, byte* payload, unsigned int length);
+
+// ================= SETUP =================
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  rfid.PCD_Init();
+  
+  preferences.begin("garage", false);
+  String savedUID = preferences.getString("masterUID", "");
+  if (savedUID != "") {
+    masterUID = savedUID;
+  }
+
+  if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED ERROR");
+    while (true);
+  }
+
+  pinMode(BTN_TOGGLE_PIN, INPUT_PULLUP);
+  pinMode(BTN_LOCK_PIN, INPUT_PULLUP);
+  
+  pinMode(LED_LOCK_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  doorServo.attach(SERVO_PIN);
+  doorServo.write(currentAngle);
+
+  updateOLED("SYSTEM READY", "Door: CLOSED");
+  Serial.println("SMART GARAGE READY");
+
+  setup_wifi();
+  espClient.setInsecure(); 
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(mqttCallback);
+
+}
+
+// ================= LOOP =================
+void loop() {
+  unsigned long now = millis();
+  
+  if (isLearningCard && (now - learnModeStartTime > 15000)) {
+    isLearningCard = false;
+    Serial.println("LEARN MODE TIMEOUT: Hết 15s chờ thẻ. Tự động hủy!");
+    updateOLED("LEARN TIMEOUT", doorStateToString(currentDoorState));
+    beep(200); delay(100); beep(200);
+  }
+
+  // 1. NETWORK & MQTT
+  handleNetwork(now);
+  
+  // 2. SAVE PREVIOUS STATE FOR SYNC
+  DoorState oldDoorState = currentDoorState;
+  bool oldLockState = isHardLocked;
+
+  // 3. READ SENSORS
+  readSonar(now);
+  safetyCheck();
+
+  // 4. READ PHYSICAL INPUTS
+  readLockSwitch(now);
+  if (!isHardLocked && !isPendingLock) {
+    readToggleButton(now);
+    readRFID(now);
+  }
+
+  // 5. UPDATE ACTUATORS
+  runServo(now);
+
+  // 6. SYNC TO WEB
+  if (client.connected()) {
+    if (currentDoorState != oldDoorState || isHardLocked != oldLockState) {
+      publishStatusToAll(true);
+      Serial.println("[ĐỒNG BỘ WEB] Phát hiện thay đổi vật lý -> Báo cáo tức thời!");
+    } else {
+      publishStatusToAll(false);
+    }
+  }
+}
+
+// ================= DOOR CONTROL ACTIONS =================
+void requestOpenDoor(String source) {
+  if (currentDoorState == DOOR_CLOSED) {
+    currentDoorState = DOOR_OPENING;
+    updateOLED("OPENING DOOR", source);
+    Serial.println("OPENING DOOR by: " + source);
+  }
+}
+
+void requestCloseDoor(String source) {
+  if (currentDoorState == DOOR_OPENED || currentDoorState == DOOR_EMERGENCY) {
+    currentDoorState = DOOR_CLOSING;
+    updateOLED("CLOSING DOOR", source);
+    Serial.println("CLOSING DOOR by: " + source);
+  }
+}
+
+void requestToggleDoor(String source) {
+  if (currentDoorState == DOOR_CLOSED) {
+    requestOpenDoor(source);
+  } else if (currentDoorState == DOOR_OPENED || currentDoorState == DOOR_EMERGENCY) {
+    requestCloseDoor(source);
+  } else if (currentDoorState == DOOR_STOPPED) {
+    if (currentDistance >= 10.0) {
+      currentDoorState = DOOR_OPENING;
+      updateOLED("RESUMING...", source);
+      Serial.println("RESUME OPENING by: " + source);
+    } else {
+      Serial.println("CANNOT RESUME: Obstacle still present!");
+    }
+  }
+}
+
+void requestLock() {
+  beep(80);
+  if (currentDoorState == DOOR_CLOSED) {
+    isHardLocked = true;
+    digitalWrite(LED_LOCK_PIN, HIGH);
+    Serial.println("SYSTEM LOCKED");
+    updateOLED("SYSTEM LOCKED", "Inside Only");
+  } else {
+    isPendingLock = true;
+    Serial.println("LOCK PENDING... CLOSING DOOR");
+    updateOLED("LOCK PENDING", "Closing...");
+    currentDoorState = DOOR_CLOSING;
+  }
+}
+
+void requestUnlock() {
+  isHardLocked = false;
+  isPendingLock = false; 
+  digitalWrite(LED_LOCK_PIN, LOW);
+  beep(80);
+  Serial.println("SYSTEM UNLOCKED");
+  updateOLED("SYSTEM READY", doorStateToString(currentDoorState));
+}
+
+// ================= INPUT READING =================
+void readToggleButton(unsigned long now) {
+  bool currentToggleState = digitalRead(BTN_TOGGLE_PIN);
+  
+  if (currentToggleState == LOW && lastToggleState == HIGH && (now - lastToggleTime > 50)) {
+    lastToggleTime = now;
+    if (isLearningCard) {
+      isLearningCard = false; 
+      updateOLED("LEARN CANCELLED", doorStateToString(currentDoorState));
+      beep(200);
+    } else {
+      requestToggleDoor("BUTTON"); 
+    }
+  }
+
+  lastToggleState = currentToggleState;
+}
+
+void readLockSwitch(unsigned long now) {
+  bool currentState = digitalRead(BTN_LOCK_PIN) == LOW; 
+  
+  if (currentState != lastLockSwitchState && (now - lastLockTime > 50)) {
+    lastLockSwitchState = currentState;
+    if (currentState) {
+      lastLockTime = now;
+      if (isLearningCard) {
+        isLearningCard = false;
+        Serial.println("LEARN MODE CANCELLED");
+        updateOLED("LEARN CANCELLED", doorStateToString(currentDoorState));
+        beep(200);
+      } else {
+        if (isHardLocked || isPendingLock) requestUnlock();
+        else requestLock();
+      }
+    }
+  }
+}
+
+void readRFID(unsigned long now) {
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    if (now - lastRfidTime > 3000) {
+      lastRfidTime = now;
+      
+      String scannedUID = "";
+      for (byte i = 0; i < rfid.uid.size; i++) {
+        scannedUID += (rfid.uid.uidByte[i] < 0x10 ? "0" : "");
+        scannedUID += String(rfid.uid.uidByte[i], HEX);
+        if (i != rfid.uid.size - 1) scannedUID += ":"; 
+      }
+      scannedUID.toUpperCase();
+
+      Serial.println("-------------------------");
+      Serial.print("MÃ THẺ: "); Serial.println(scannedUID);
+
+      if (isLearningCard) {
+         masterUID = scannedUID;
+         preferences.putString("masterUID", masterUID);
+         isLearningCard = false;
+         Serial.println("-> LƯU THÀNH CÔNG THẺ CHÍNH MỚI: " + masterUID);
+         beep(100); delay(100); beep(100); delay(100); beep(300);
+         updateOLED("CARD SAVED!", "System Ready");
+         delay(2000);
+         updateOLED("SYSTEM READY", doorStateToString(currentDoorState));
+      } else {
+        if (scannedUID == masterUID) {
+          Serial.println("-> HỢP LỆ! Mở/Đóng cửa.");
+          beep(80);
+          requestToggleDoor("RFID");
+        } else {
+          Serial.println("-> SAI MÃ THẺ! Cảnh báo đột nhập.");
+          beep(500);
+          updateOLED("ACCESS DENIED", "Invalid Card!");
+        }
+      }
+      Serial.println("-------------------------");
+    }
+    rfid.PICC_HaltA(); 
+  }
+}
+
+// ================= SENSORS & ACTUATORS =================
+void readSonar(unsigned long now) {
+  if (now - lastSonarTime < 60) return;
+  lastSonarTime = now;
+  
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH, 3000);
+  currentDistance = (duration == 0) ? 999.0 : (duration / 2.0) * 0.0343;
+}
+
+void safetyCheck() {
+  // 1. CLOSING
+  if (currentDoorState == DOOR_CLOSING && currentDistance < 10.0) {
+    currentDoorState = DOOR_EMERGENCY;
+    if (isPendingLock) {
+      isPendingLock = false;
+      Serial.println("LOCK CANCELLED DUE TO OBSTACLE");
+    }
+    beep(300);
+    Serial.println("OBSTACLE DETECTED - EMERGENCY OPEN");
+    updateOLED("OBSTACLE!", "EMERGENCY OPEN");
+  }
+
+  // 2. OPENING
+  if (currentDoorState == DOOR_OPENING
+      && currentAngle > ANGLE_SAFE_ZONE
+      && currentDistance < 10.0) {
+    currentDoorState = DOOR_STOPPED;
+    beep(300);
+    Serial.println("OBSTACLE DETECTED - DOOR STOPPED (not past safe zone)");
+    updateOLED("OBSTACLE!", "Door STOPPED");
+  }
+}
+
+//==== SERVO =========
+void runServo(unsigned long now) {
+  // 1. THIẾT LẬP TỐC ĐỘ
+  unsigned long currentDelay = 15; 
+  
+  if (currentDoorState == DOOR_OPENING) {
+    currentDelay = 30; 
+  } else if (currentDoorState == DOOR_EMERGENCY) {
+    currentDelay = 5;  
+  }
+
+  if (now - lastServoTime < currentDelay) return;
+  lastServoTime = now;
+
+  switch (currentDoorState) {
+
+    case DOOR_OPENING:
+      currentAngle -= 1; 
+      if (currentAngle == ANGLE_OPENED) { 
+        currentAngle = ANGLE_OPENED;
+        currentDoorState = DOOR_OPENED;
+        if (!isHardLocked)
+          updateOLED("ACCESS GRANTED", "Door: OPENED");
+      }
+      doorServo.write(currentAngle);
+      break;
+
+    case DOOR_CLOSING:
+      currentAngle += 1; 
+      if (currentAngle == ANGLE_CLOSED) { 
+        currentAngle = ANGLE_CLOSED;
+        currentDoorState = DOOR_CLOSED;
+
+        if (isPendingLock) {
+          isPendingLock = false;
+          isHardLocked = true;
+          digitalWrite(LED_LOCK_PIN, HIGH);
+          Serial.println("SYSTEM LOCKED");
+          updateOLED("SYSTEM LOCKED", "Inside Only");
+        } else if (!isHardLocked) {
+          updateOLED("SYSTEM READY", "Door: CLOSED");
+        }
+      }
+      doorServo.write(currentAngle);
+      break;
+
+    case DOOR_EMERGENCY:
+      currentAngle -= 3;
+      if (currentAngle <= ANGLE_OPENED) {
+        currentAngle = ANGLE_OPENED;
+        currentDoorState = DOOR_OPENED;
+      }
+      doorServo.write(currentAngle);
+      break;
+
+    case DOOR_STOPPED:
+      doorServo.write(currentAngle);
+      break;
+
+    default:
+      break;
+  }
+}
+
+// ================= HARDWARE PERIPHERALS =================
+void updateOLED(String line1, String line2) {
+  oled.clearDisplay();
+  oled.setTextSize(1);
+  oled.setTextColor(SSD1306_WHITE);
+  oled.setCursor(0, 15);
+  oled.println(line1);
+  oled.setCursor(0, 40);
+  oled.println(line2);
+  oled.display();
+}
+
+void beep(int duration) {
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(duration);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
+// ================= UTILITIES =================
+String doorStateToString(DoorState state) {
+  switch (state) {
+    case DOOR_CLOSED:    return "Door: CLOSED";
+    case DOOR_OPENED:    return "Door: OPENED";
+    case DOOR_STOPPED:   return "Door: STOPPED";
+    case DOOR_EMERGENCY: return "EMERGENCY!";
+    default:             return "Moving...";
+  }
+}
+
+String getWebDoorState(DoorState state) {
+  switch (state) {
+    case DOOR_CLOSED:    return "DOOR_CLOSED";
+    case DOOR_OPENING:   return "DOOR_OPENING";
+    case DOOR_OPENED:    return "DOOR_OPENED";
+    case DOOR_CLOSING:   return "DOOR_CLOSING";
+    case DOOR_STOPPED:   return "DOOR_STOPPED";
+    case DOOR_EMERGENCY: return "DOOR_EMERGENCY";
+    default:             return "DOOR_CLOSED";
+  }
+}
+
+// ================= NETWORK & MQTT =================
+void handleNetwork(unsigned long now) {
+  if (WiFi.status() != WL_CONNECTED) {
+    
+    if (isHardLocked) {
+      if (now - lastReconnectAttempt > 10000) {
+        Serial.println("[WIFI] Reconnecting in background...");
+        WiFi.disconnect();
+        WiFi.reconnect();
+        lastReconnectAttempt = now;
+      }
+    }
+    
+    return; 
+  }
+  if (!client.connected()) {
+    if (now - lastReconnectAttempt > 5000) {
+      lastReconnectAttempt = now;
+      reconnectMQTT(); 
+    }
+  } else {
+    client.loop(); 
+  }
+}
+    
+
+
+void setup_wifi() {
+  delay(10);
+  Serial.println();
+  Serial.print("Connecting WiFi: ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi Connected! IP: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\n[WARNING] WiFi failed! Offline mode.");
+  }
+}
+
+bool reconnectMQTT() {
+  Serial.print("Connecting MQTT... ");
+  String clientId = "ESP32Garage-Minh-";
+  clientId += String(random(0xffff), HEX);
+
+  if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
+    Serial.println(" SUCCESS!");
+    client.subscribe(mqtt_topic_cmd);
+    return true;
+  } else {
+    Serial.print(" FAILED, rc=");
+    Serial.println(client.state());
+    return false;
+  }
+}
+
+
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  String message;
+  for (int i = 0; i < length; i++) message += (char)payload[i];
+  
+  Serial.print("Web Command ["); Serial.print(topic); Serial.print("]: "); Serial.println(message);
+
+  if (String(topic) == mqtt_topic_cmd && !isHardLocked && !isPendingLock) {
+    if (message == "OPEN") requestOpenDoor("Web Command");
+    else if (message == "CLOSE") requestCloseDoor("Web Command");
+    else if (message == "TOGGLE") requestToggleDoor("Web Command");
+    else if (message.startsWith("LEARN_CARD:")) {
+
+      String password = message.substring(11);
+      if (password == "123456") {
+        isLearningCard = true;
+        learnModeStartTime = millis();
+        beep(500);
+        updateOLED("LEARN MODE", "Scan new card");
+        Serial.println("LEARN MODE (Web): Xác thực hệ thống hợp lệ!");
+      } else {
+        beep(200); delay(100); beep(200);
+        updateOLED("AUTH FAILED", "Wrong Password");
+        Serial.println("AUTH FAILED (Web): Lệnh chặn vì Sai mật khẩu!");
+      }
+    }
+  }
+}
+
+
+
+void publishStatusToWeb(bool force) {
+  unsigned long now = millis();
+  if (force || now - lastPublishTime > 500) {
+    lastPublishTime = now;
+
+    String payload = "{";
+    payload += "\"door\":\"" + getWebDoorState(currentDoorState) + "\",";
+    payload += "\"lock\":\"" + String(isHardLocked ? "LOCKED" : "UNLOCKED") + "\"";
+    payload += "}";
+
+    client.publish(mqtt_topic_status, payload.c_str());
+  }
+}
+
+
+void publishStatusToAll(bool force) {
+  publishStatusToWeb(force);
+
+}
+
+</code></pre>
+    </div>
+
+  </div>
+</body>
+
+</html>

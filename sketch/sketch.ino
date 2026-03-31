@@ -1,14 +1,3 @@
-# TÀI LIỆU PHÂN TÍCH MÃ NGUỒN DỰ ÁN SMART GARAGE
-
-Tài liệu này cung cấp cái nhìn chuyên sâu về kiến trúc phần mềm bên trong hệ thống vi điều khiển ESP32 (`sketch.ino`). Không chỉ dừng lại ở việc đáp ứng các tính năng cơ bản, mã nguồn này được thiết kế theo tư duy sản phẩm để giải quyết những **vấn đề cốt lõi của hệ thống IoT thời gian thực**: ngăn chặn tình trạng thắt cổ chai (non-blocking architecture), tối giản nhiễu tín hiệu điện, giám sát chu trình cơ khí độc lập (chống kẹt hành trình mở/đóng), và duy trì trạng thái phục hồi hoàn hảo khi liên kết Internet bị suy giảm.
-
-Dưới đây là 100% mã nguồn được bóc rã thành **13 khối logic** chuyên sâu.
-
----
-
-### 📦 KHỐI 1: Khai báo Thư viện, Macro & Cấu hình Nền tảng
-**1. Trích xuất Code:**
-```cpp
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -52,17 +41,6 @@ const char* mqtt_user = MQTT_USER;
 const char* mqtt_pass = MQTT_PASS; 
 const char* mqtt_topic_status = "garage/status";
 const char* mqtt_topic_cmd = "garage/command";
-```
-
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Quản lý trừu tượng phần cứng (Hardware Abstraction):** Các dự án thường bị phân mảnh do cấu hình phần cứng nhúng rải rác. Hệ thống giải quyết bằng các Macro định nghĩa toàn cục. Điển hình như `ANGLE_SAFE_ZONE` được tính toán động (dynamic macro), khi thay đổi bản lề cơ học làm xê dịch `ANGLE_CLOSED` hay `ANGLE_OPENED`, vùng an toàn cảm biến chống kẹt sẽ tự động nội suy phân chia lại mà không phá vỡ logic hệ thống.
-- **Tiêu chuẩn An toàn Đường truyền:** Đồ án sử dụng thư viện `WiFiClientSecure` làm core hạ tầng. Thay vì đẩy dữ liệu thô (plaintext), quá trình bảo mật SSL/TLS được phủ lên giao thức MQTT (port 8883) để vá lỗ hổng rò rỉ mã mở cửa trước các phương thức nghe lén mạng WiFi công cộng.
-
----
-
-### 📦 KHỐI 2: Khởi tạo Máy Trạng Thái Toàn Cục & Biến Không Gian Xung Bộ
-**1. Trích xuất Code:**
-```cpp
 // ================= GLOBAL OBJECTS =================
 MFRC522 rfid(SS_PIN, RST_PIN);
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
@@ -104,9 +82,19 @@ unsigned long lastServoTime = 0;
 unsigned long lastPublishTime = 0;
 unsigned long lastReconnectAttempt = 0;
 
+int buzzerPattern[5] = {0};
+int buzzerPatternLen = 0;
+int buzzerPatternIndex = 0;
+unsigned long lastBuzzerToggleTime = 0;
+bool isBuzzerPlaying = false;
+unsigned long oledRestoreTime = 0;
+bool isOledTemp = false;
+
 // ================= PROTOTYPES =================
 void updateOLED(String line1, String line2);
-void beep(int duration);
+void updateOLEDTemp(String line1, String line2, int duration);
+void beep(int t1, int t2 = 0, int t3 = 0, int t4 = 0, int t5 = 0);
+void handleTasks(unsigned long now);
 void requestOpenDoor(String source);
 void requestCloseDoor(String source);
 void requestToggleDoor(String source);
@@ -115,17 +103,7 @@ void requestUnlock();
 void publishStatusToWeb(bool force = false);
 void setup_wifi();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Giải bài toán xung đột hành vi bằng Máy trạng thái ngữ cảnh (FSM):** Một cánh Garage bị rơi vào trạng thái "vừa nhận lệnh kéo lên, vừa bị cảm biến bắt lệnh hạ xuống" sẽ làm cháy cuộn dây motor servo ngay lập tức. Cấu trúc `enum DoorState` tạo ra "một lối mòn duy nhất" phân định nghiêm ngặt vị trí cửa nhằm ngăn chặn các sự kiện hệ thống cạnh tranh tài nguyên với nhau.
-- **Micro-Timers thay thế hệ thống chốt:** Chùm biến kích thước bộ nhớ lớn `unsigned long` được lưu riêng cho từng ngoại vi (như `lastSonarTime`, `lastServoTime`). Chúng tạo tiền đề cho thuật toán đa nhiệm Non-blocking ở luồng chính, giúp chip phân tích song song nhiều dữ kiện cảm biến.
-
----
-
-### 📦 KHỐI 3: Khởi tạo Trình Điều Khiển (Setup Function)
-**1. Trích xuất Code:**
-```cpp
 // ================= SETUP =================
 void setup() {
   Serial.begin(9600);
@@ -164,17 +142,7 @@ void setup() {
   client.setCallback(mqttCallback);
 
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Kiến trúc dung lỗi và khắc phục sự cố điện:** Smart-garage đối diện nguy cơ mất điện lưới. Dữ liệu thẻ rfid cấp phép của chủ nhà nếu dùng RAM tĩnh sẽ bốc hơi khi reset. Bằng Object `preferences` ứng dụng bộ lưu trữ không bay hơi NVS Flash (EEPROM), hệ thống có khả năng gọi lại thẻ cũ bất chấp tình trạng hoạt động bị sập nguồn bao nhiêu lần.
-- **Tối ưu mã hóa hạ tầng TLS:** Lệnh `espClient.setInsecure()` được gọi để tạo đường hầm mã hóa bảo mật chuẩn mà không yêu cầu ESP32 tốn tài nguyên cho việc giải ngược Certificate Authority. Qua đó CPU không bị chết yểu do thiếu RAM khi Handshake, hệ thống vẫn duy trì sự toàn vẹn của gói mạng điều khiển cửa mà tối đa tốc độ kết nối.
-
----
-
-### 📦 KHỐI 4: Bộ Lập Lịch Tác Vụ Micro (Main Loop)
-**1. Trích xuất Code:**
-```cpp
 // ================= LOOP =================
 void loop() {
   unsigned long now = millis();
@@ -182,12 +150,13 @@ void loop() {
   if (isLearningCard && (now - learnModeStartTime > 15000)) {
     isLearningCard = false;
     Serial.println("LEARN MODE TIMEOUT: Hết 15s chờ thẻ. Tự động hủy!");
-    updateOLED("LEARN TIMEOUT", doorStateToString(currentDoorState));
-    beep(200); delay(100); beep(200);
+    updateOLEDTemp("LEARN TIMEOUT", doorStateToString(currentDoorState), 2000);
+    beep(200, 100, 200);
   }
 
-  // 1. NETWORK & MQTT
+  // 1. NETWORK & BACKGROUND TASKS
   handleNetwork(now);
+  handleTasks(now);
   
   // 2. SAVE PREVIOUS STATE FOR SYNC
   DoorState oldDoorState = currentDoorState;
@@ -217,17 +186,7 @@ void loop() {
     }
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Kiến trúc chia sẻ thời gian (Time-sliced Round-Robin):** Nỗi ám ảnh của vi điều khiển đơn nhân là "thắt cổ chai" (bottleneck). Hàm loop được bẻ rời thành 6 luồng xử lý trôi qua nhau không chờ đợi. Motor xoay mượt nhưng ngắt khẩn cấp vẫn bắt được sự cản vật thể ở luồng số 3 trong chưa tới chục mili-giây.
-- **Đánh chặn độ trễ Cloud đồng bộ:** Tính năng lưu trữ "Tracking Snapshot" (`oldDoorState` vs `currentDoorState`) tại đầu và cuối mỗi nhịp xung nhịp clock giúp ứng dụng tiết kiệm 95% năng lượng gửi gói mạng, loại bỏ Polling vô tội vạ và chỉ bắn JSON trực diện lên mạng mỗi khi Door thay đổi tọa độ cơ học.
-
----
-
-### 📦 KHỐI 5: Gateway Điều Hướng Luồng Tín Hiệu (Action Transition)
-**1. Trích xuất Code:**
-```cpp
 // ================= DOOR CONTROL ACTIONS =================
 void requestOpenDoor(String source) {
   if (currentDoorState == DOOR_CLOSED) {
@@ -284,17 +243,7 @@ void requestUnlock() {
   Serial.println("SYSTEM UNLOCKED");
   updateOLED("SYSTEM READY", doorStateToString(currentDoorState));
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Giải bài toán nhiễu lệnh tương tác:** Đứng trước thực tế người dùng có thể kích hoạt nhiều tín hiệu đồng thời cùng 1 lúc (vừa gạt wifi, vừa quẹt thẻ) gây sập hệ thống. Khối lệnh này trở thành hệ thống Validation độc lập: cửa chỉ MỞ khi thực sự xác nhận đã ĐÓNG toàn phần.
-- **Queue Task Khóa Thông Minh:** Việc khóa vội (`requestLock`) khi cửa chưa khép xong có thể sinh ra sai số logic. Biến `isPendingLock` tạo ra trạng thái Hàng chờ ảo (Pending Execution) — nó phát lệnh cửa phải đóng, tự đệm lệnh vào hàng đợi và kích hoạt chốt khóa chết khi cảm biến báo hành trình đóng chạm mốc cuối. Trải nghiệm người dùng cực kì bảo đảm.
-
----
-
-### 📦 KHỐI 6: Khử Nhiễu Dao Động Cơ Học Điện (Hardware Debouncing)
-**1. Trích xuất Code:**
-```cpp
 // ================= INPUT READING =================
 void readToggleButton(unsigned long now) {
   bool currentToggleState = digitalRead(BTN_TOGGLE_PIN);
@@ -332,16 +281,7 @@ void readLockSwitch(unsigned long now) {
     }
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Giải pháp dập tia lửa lò xo nhiễu sóng (Software Filter):** Một công tắc tiếp điểm ở môi trường vật lý luôn đi kèm những chuỗi rập rờn phóng điện. Chip ở xung nhịp 240MHz có thể nhầm lẫn sự rung đó thành vài chục lần bấm khác nhau. Bộ phát hiện biên đi xuống (Edge-down detection) có biên độ cản `> 50ms` được cấu hình để "chặn ngắt" mọi tín hiệu mù và bảo hiểm hoàn hảo ý đồ từ ngón tay người dùng mà không cần linh kiện nhúng đắt tiền bên ngoài điện trở nội bộ Pull_up.
-
----
-
-### 📦 KHỐI 7: Quản Lý Phân Quyền Truy Cập RFID Động & Băng Tần Mở Rộng
-**1. Trích xuất Code:**
-```cpp
 void readRFID(unsigned long now) {
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
     if (now - lastRfidTime > 3000) {
@@ -363,10 +303,8 @@ void readRFID(unsigned long now) {
          preferences.putString("masterUID", masterUID);
          isLearningCard = false;
          Serial.println("-> LƯU THÀNH CÔNG THẺ CHÍNH MỚI: " + masterUID);
-         beep(100); delay(100); beep(100); delay(100); beep(300);
-         updateOLED("CARD SAVED!", "System Ready");
-         delay(2000);
-         updateOLED("SYSTEM READY", doorStateToString(currentDoorState));
+         beep(100, 100, 100, 100, 300);
+         updateOLEDTemp("CARD SAVED!", "System Ready", 2000);
       } else {
         if (scannedUID == masterUID) {
           Serial.println("-> HỢP LỆ! Mở/Đóng cửa.");
@@ -383,16 +321,7 @@ void readRFID(unsigned long now) {
     rfid.PICC_HaltA(); 
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Dynamic Key-Provisioning (Cấp quyền Quản trị Động):** Giải quyết triệt dể khuyết điểm "Khóa chết thẻ" của lập trình sinh viên cũ. Khi hệ thống ở chế độ Cấp thẻ Mới (Learn Mode kích trực tuyến từ Internet do chủ nhà xác nhận), mã UID của thẻ Hexadecimal trực tiếp được định dạng chuẩn lại, ghi thẳng đè vào bộ nhớ ROM của thiết bị. Phá vỡ sự phụ thuộc vào source-code, trở thành dự án nhúng "Plug-and-play" đúng nghĩa đen của thiết kế thương mại cao cấp.
-
----
-
-### 📦 KHỐI 8: Radar Siêu Âm và Thuật Toán Phanh Khẩn Cấp Chuẩn Độ Ưu Tiên
-**1. Trích xuất Code:**
-```cpp
 // ================= SENSORS & ACTUATORS =================
 void readSonar(unsigned long now) {
   if (now - lastSonarTime < 60) return;
@@ -431,17 +360,7 @@ void safetyCheck() {
     updateOLED("OBSTACLE!", "Door STOPPED");
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Chặn thời gian chết của Sensor (Ping Threshold Mitigation):** Hàm đọc xung siêu âm gốc (`pulseIn`) của thư viện Arduino là mối đe dọa thắt nút xử lý lớn nhất vì nó tạo "Blocking-state". Việc chèn chặt tham số ranh giới `3000` micro-giây ép cảm biến chỉ chờ tối đa 3 mili-giây cho phản xạ khoảng cách <0.5m, giải cứu luồng chạy của Motor luôn mượt mà.
-- **Bài toán vật chắn khuất tự nhiên:** Trong pha `DOOR_OPENING`, khi cuốn cánh lên đỉnh, chính đuôi của cánh cửa có thể trở thành vật lọt vào tầm bắn của Sonar gây khóa tuần hoàn kẹt động cơ. Phân giải nó, thuật toán bỏ qua phát hiện trong vùng `ANGLE_SAFE_ZONE` vừa bảo vệ xe đang lùi vừa ngó lơ bản thân cánh garage.
-
----
-
-### 📦 KHỐI 9: Động Lực Học Hành Trình & Quản Trị PWM Servo Không Trì Hoãn
-**1. Trích xuất Code:**
-```cpp
 //==== SERVO =========
 void runServo(unsigned long now) {
   // 1. THIẾT LẬP TỐC ĐỘ
@@ -505,16 +424,7 @@ void runServo(unsigned long now) {
       break;
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Giải quyết động năng ảo bằng Vector biến thiên tốc độ:** Điều khiển Servor theo độ trễ vòng quét `delay()` sẽ triệt tiêu cảm biến làm đực hệ thống (Freeze hardware). Thuật toán Sweep Motor Timer này tính toán quỹ đạo từng góc 1 độ độc lập phụ thuộc vào Time-Slice. `currentDelay` tự điều độ mở chậm, khép vừa và có phản ứng cực kì bạo liệt (giật gấp 3 góc) nếu bước vào chế độ `DOOR_EMERGENCY` nhằm hạn chế kẹp tổn thương đồ đạc khi có sự cố.
-
----
-
-### 📦 KHỐI 10: Giảng Hòa Tín Hiệu Số Thành Thông Điệp Thị Giác
-**1. Trích xuất Code:**
-```cpp
 // ================= HARDWARE PERIPHERALS =================
 void updateOLED(String line1, String line2) {
   oled.clearDisplay();
@@ -527,10 +437,43 @@ void updateOLED(String line1, String line2) {
   oled.display();
 }
 
-void beep(int duration) {
+void updateOLEDTemp(String line1, String line2, int duration) {
+  updateOLED(line1, line2);
+  oledRestoreTime = millis() + duration;
+  isOledTemp = true;
+}
+
+void handleTasks(unsigned long now) {
+  if (isOledTemp && now > oledRestoreTime) {
+    isOledTemp = false;
+      updateOLED("SYSTEM READY", doorStateToString(currentDoorState));
+  }
+  
+  if (!isBuzzerPlaying) return;
+  if (now - lastBuzzerToggleTime >= buzzerPattern[buzzerPatternIndex]) {
+    lastBuzzerToggleTime = now;
+    buzzerPatternIndex++;
+    if (buzzerPatternIndex >= buzzerPatternLen) {
+      isBuzzerPlaying = false;
+      digitalWrite(BUZZER_PIN, LOW);
+    } else {
+      digitalWrite(BUZZER_PIN, (buzzerPatternIndex % 2 == 0) ? HIGH : LOW);
+    }
+  }
+}
+
+void beep(int t1, int t2, int t3, int t4, int t5) {
+  buzzerPattern[0] = t1; buzzerPattern[1] = t2; buzzerPattern[2] = t3; 
+  buzzerPattern[3] = t4; buzzerPattern[4] = t5;
+  buzzerPatternLen = 0;
+  for (int i = 0; i < 5; i++) {
+    if (buzzerPattern[i] > 0) buzzerPatternLen++;
+    else break;
+  }
+  buzzerPatternIndex = 0;
+  isBuzzerPlaying = true;
+  lastBuzzerToggleTime = millis();
   digitalWrite(BUZZER_PIN, HIGH);
-  delay(duration);
-  digitalWrite(BUZZER_PIN, LOW);
 }
 
 // ================= UTILITIES =================
@@ -555,17 +498,7 @@ String getWebDoorState(DoorState state) {
     default:             return "DOOR_CLOSED";
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Tập trung hóa xử lý bộ đệm đồ họa (Centralized Buffer Handling):** Gánh nặng vẽ pixel 2 chiều lên OLED rất tốn Clock Cycles. Đóng gói hàm duy nhất chỉ tiếp nhận dòng văn bản giúp ngăn chặn gián đoạn khung hình (Tearing).
-- **Phân tách ngữ nghĩa UI Mạng và Chữ vật lý:** Cung cấp giải mã Enum State trở thành 2 định dạng riêng biệt phục vụ cho hiển thị cục bộ I2C (`doorStateToString`) thân thiện người xem và truyền tải hệ thống Cloud chuỗi chuẩn xác (`getWebDoorState`).
-
----
-
-### 📦 KHỐI 11: Hạ Tầng Giải Cứu Kết Nối Wifi Mù Nhất Quán (Blind Fail-over)
-**1. Trích xuất Code:**
-```cpp
 // ================= NETWORK & MQTT =================
 void handleNetwork(unsigned long now) {
   if (WiFi.status() != WL_CONNECTED) {
@@ -592,6 +525,7 @@ void handleNetwork(unsigned long now) {
 }
     
 
+
 void setup_wifi() {
   delay(10);
   Serial.println();
@@ -614,17 +548,7 @@ void setup_wifi() {
     Serial.println("\n[WARNING] WiFi failed! Offline mode.");
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Triệt tiêu lỗ hổng tắc nghẽn bộ nhớ Wifi:** Vấn đề sập sóng làm hệ thống IoT "treo não" vì nằm lỳ trong vòng lặp reconnect kinh điển được giải quyết ấn tượng! Wifi chỉ được quyền kích hoạt tải nối mạch khẩn cấp (reconnect trong background) NẾU cổng gara đã sập xuống vào trạng thái chốt an toàn (`if (isHardLocked)`). 
-Nhờ logic chặn này, trong khi cửa lơ lửng, sự can thiệp ngắt của wifi stack không thể đánh cấp CPU tranh phần với hành vi khẩn cấp của Cảm biến chống kẹt. Garage tự chủ hoạt động tay bất cứ lúc nào bất chấp Internet có hay mất.
-
----
-
-### 📦 KHỐI 12: Đăng Ký Handshake Phân Phiên & Tường Lửa Web Lớp 2
-**1. Trích xuất Code:**
-```cpp
 bool reconnectMQTT() {
   Serial.print("Connecting MQTT... ");
   String clientId = "ESP32Garage-Minh-";
@@ -663,24 +587,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         updateOLED("LEARN MODE", "Scan new card");
         Serial.println("LEARN MODE (Web): Xác thực hệ thống hợp lệ!");
       } else {
-        beep(200); delay(100); beep(200);
-        updateOLED("AUTH FAILED", "Wrong Password");
+        beep(200, 100, 200);
+        updateOLEDTemp("AUTH FAILED", "Wrong Password", 2000);
         Serial.println("AUTH FAILED (Web): Lệnh chặn vì Sai mật khẩu!");
       }
     }
   }
 }
-```
 
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Giải quyết triệt để vấn đề Connection Drops & Session Hijacking:** Hệ sinh thái MQTT với 1 kênh nhận lệnh khi thiết bị chập chờn sẽ xảy ra lỗi lặp ID đăng xuất. Bằng chức năng sinh mã Định danh phiên `String(random(0xffff), HEX)`, hệ thống có thể kết nối vô hạn lần đến Broker mà không bị đẩy (kick) ra bởi chính sự lặp lặp phiên của nó trong cơ sở dữ liệu.
-- **Tường lửa Web Hai Lớp (2FA Soft-Mechanism):** Cung cấp mật khẩu nhúng `123456` đối chiếu tại chip chứ không dựa qua Node.JS Server. Bất kì ai chiếm quyền Topic Cloud gửi lệnh `LEARN_CARD` mà không nắm mã khóa cục bộ này sẽ bị bo bo cách ly từ chối thao tác ngay trên vòng ngoài MQTT.
 
----
 
-### 📦 KHỐI 13: Mô Hình Nhà Cung Cấp Tin Tức JSON (Event-Driven Sink)
-**1. Trích xuất Code:**
-```cpp
 void publishStatusToWeb(bool force) {
   unsigned long now = millis();
   if (force || now - lastPublishTime > 500) {
@@ -700,7 +616,3 @@ void publishStatusToAll(bool force) {
   publishStatusToWeb(force);
 
 }
-```
-
-**2. Phân tích Vấn đề & Giải pháp Kỹ thuật:**
-- **Giải bài toán Throttling Spam Cloud:** Thiết kế API theo phương thức xây dựng chuỗi Payload `JSON` nguyên bản. Giữ cấu trúc dung lượng gói mạng nhỏ nhất trong một mô hình "Thúc ép theo sự kiện" (`force`). Tức là thông thường hệ thống thinh lặng, chỉ khi có hành vi vi phạm vật lý thật sự nó mới gộp một chuỗi `{"door":"..","lock":".."}` xả ra đường hầm mạng. Điều này duy trì tuổi thọ làm việc cho hàng triệu nhịp truyền thông tin IoT bảo mật đường dài.

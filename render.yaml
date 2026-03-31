@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: smart-garage-backend
+    env: node
+    region: singapore
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: MQTT_URL
+        sync: false
+      - key: MQTT_USER
+        sync: false
+      - key: MQTT_PASS
+        sync: false
