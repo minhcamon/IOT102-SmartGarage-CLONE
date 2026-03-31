@@ -46,7 +46,7 @@ mqttClient.on('error', (err) => {
 const app = express();
 app.use(cors());
 app.use(express.json());
-const HTTP_PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
 app.get('/', (req, res) => {
   res.send('Smart Gara API is running with HiveMQ');
@@ -78,8 +78,8 @@ app.post('/api/command', (req, res) => {
   });
 });
 
-app.listen(HTTP_PORT, () => {
-  console.log(`[HTTP] Express server listening on port ${HTTP_PORT}`);
+app.listen(PORT, () => {
+  console.log(`[HTTP] Express server listening on port ${PORT}`);
 });
 
 // ==========================================

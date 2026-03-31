@@ -4,7 +4,7 @@ import mqtt from 'mqtt';
 import { ShieldAlert, CarFront, Radio, Loader2, Lock, Unlock, Power, DoorClosed, DoorOpen, ArrowUpDown, TriangleAlert, KeyRound } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 
-var ipv4 = "172.20.10.4"
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function App() {
   const [garageState, setGarageState] = useState({
@@ -63,7 +63,7 @@ function App() {
 
   useEffect(() => {
     // 1. Fetch
-    axios.get('http://localhost:3001/api/state')
+    axios.get(`${API_BASE_URL}/api/state`)
       .then(res => setGarageState(res.data))
       .catch(err => console.error("API Error", err));
 
@@ -105,7 +105,7 @@ function App() {
   const sendCommand = async (action) => {
     try {
       setLoadingAction(action);
-      const response = await axios.post(`http://${ipv4}:3001/api/command`, { action });
+      const response = await axios.post(`${API_BASE_URL}/api/command`, { action });
       setTimeout(() => setLoadingAction(null), 800);
       return response.data.success;
     } catch (error) {
