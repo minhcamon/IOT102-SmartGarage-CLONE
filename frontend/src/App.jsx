@@ -68,34 +68,42 @@ function App() {
       .catch(err => console.error("API Error", err));
 
     // 2. MQTT
-    const client = mqtt.connect(import.meta.env.VITE_MQTT_URL, {
-      username: import.meta.env.VITE_MQTT_USER,
-      password: import.meta.env.VITE_MQTT_PASS, // Lấy từ .env
-      clientId: "frontend_" + Math.random().toString(16).substr(2, 8)
-    });
+    const mqttUrl = import.meta.env.VITE_MQTT_URL;
+    let client = null;
 
-    client.on('connect', () => {
-      console.log('Connected to MQTT via Secure WebSocket (TLS)');
-      client.subscribe('garage/status');
-    });
+    if (!mqttUrl) {
+      console.error('LỖI MÔI TRƯỜNG: VITE_MQTT_URL chưa được thiết lập. Hãy thêm biến VITE_MQTT_URL vào Vercel và Redeploy lại!');
+      toast.error('Giao thức MQTT đang lỗi do thiếu cấu hình biến môi trường VITE_MQTT_URL!');
+    } else {
+      client = mqtt.connect(mqttUrl, {
+        username: import.meta.env.VITE_MQTT_USER,
+        password: import.meta.env.VITE_MQTT_PASS, // Lấy từ .env
+        clientId: "frontend_" + Math.random().toString(16).substr(2, 8)
+      });
 
-    client.on('message', (topic, message) => {
-      if (topic === 'garage/status') {
-        const payloadStr = message.toString().trim();
-        try {
-          if (payloadStr.startsWith('{')) {
-            const parsedData = JSON.parse(payloadStr);
-            setGarageState(prevState => ({ ...prevState, ...parsedData }));
-          } else if (['OPEN', 'CLOSED', 'DOOR_OPENED', 'DOOR_CLOSED', 'OPENING', 'CLOSING', 'DOOR_EMERGENCY'].includes(payloadStr)) {
-            setGarageState(prevState => ({ ...prevState, door: payloadStr }));
-          } else if (['LOCKED', 'UNLOCKED'].includes(payloadStr)) {
-            setGarageState(prevState => ({ ...prevState, lock: payloadStr }));
+      client.on('connect', () => {
+        console.log('Connected to MQTT via Secure WebSocket (TLS)');
+        client.subscribe('garage/status');
+      });
+
+      client.on('message', (topic, message) => {
+        if (topic === 'garage/status') {
+          const payloadStr = message.toString().trim();
+          try {
+            if (payloadStr.startsWith('{')) {
+              const parsedData = JSON.parse(payloadStr);
+              setGarageState(prevState => ({ ...prevState, ...parsedData }));
+            } else if (['OPEN', 'CLOSED', 'DOOR_OPENED', 'DOOR_CLOSED', 'OPENING', 'CLOSING', 'DOOR_EMERGENCY'].includes(payloadStr)) {
+              setGarageState(prevState => ({ ...prevState, door: payloadStr }));
+            } else if (['LOCKED', 'UNLOCKED'].includes(payloadStr)) {
+              setGarageState(prevState => ({ ...prevState, lock: payloadStr }));
+            }
+          } catch (error) {
+            console.error('MQTT Parse error:', error);
           }
-        } catch (error) {
-          console.error('MQTT Parse error:', error);
         }
-      }
-    });
+      });
+    }
 
     return () => {
       if (client) client.end();
